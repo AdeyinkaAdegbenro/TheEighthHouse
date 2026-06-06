@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THE EIGHTH HOUSE | Production Suite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime&display=swap" rel="stylesheet">
+    <style>
+        .screenplay-font { font-family: 'Courier Prime', monospace; }
+        .script-container { line-height: 1.5; white-space: pre-wrap; padding: 60px 80px; min-height: 100%; position: relative; }
+        .scene-header { font-weight: bold; color: #2563eb; border-bottom: 2px solid #dbeafe; margin-top: 2rem; margin-bottom: 1rem; display: block; text-align: center; }
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 p-4 screenplay-font" x-data="shotApp()" x-cloak>
+    
+    <!-- NAVIGATION BAR -->
+    <nav class="flex justify-between items-center bg-gray-800 p-4 rounded-xl mb-6 shadow-lg font-sans">
+        <div class="flex items-center gap-6">
+            <h2 class="text-xl font-bold text-blue-400 italic">THE EIGHTH HOUSE</h2>
+            <button @click="view = 'script'" :class="view === 'script' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-400'" class="pb-1 font-bold uppercase text-xs">Script</button>
+            <button @click="view = 'list'; fetchShots()" :class="view === 'list' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-400'" class="pb-1 font-bold uppercase text-xs">Shot List</button>
+            <button @click="view = 'storyboard'; fetchShots()" :class="view === 'storyboard' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-400'" class="pb-1 font-bold uppercase text-xs">Storyboard</button>
+        </div>
+        
+        <div class="flex items-center gap-2 ml-4" x-show="view === 'script' && !editMode">
+            <label class="text-[10px] text-gray-500 uppercase font-black">Jump to:</label>
+            <select @change="scrollToScene($event.target.value)" class="bg-gray-900 text-blue-400 text-xs font-bold p-1 rounded border border-gray-700 outline-none">
+                <option value="">Select Scene...</option>
+                <template x-for="scene in sceneList" :key="scene.id">
+                    <option :value="scene.id" x-text="scene.name"></option>
+                </template>
+            </select>
+        </div>
+
+        <a href="/export" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded text-[10px] font-bold uppercase">Export CSV</a>
+    </nav>
+
+    <main class="grid grid-cols-12 gap-6 h-[85vh]">
+        
+        <!-- SCRIPT VIEW SECTION -->
+        <template x-if="view === 'script'">
+            <div class="col-span-12 grid grid-cols-12 gap-6 h-full">
+                <div id="script-viewport" class="col-span-7 flex flex-col overflow-y-auto bg-gray-950 rounded-lg border border-gray-800">
+                    <div class="p-2 border-b border-gray-800 flex justify-end">
+                        <button @click="toggleMode()" class="text-[10px] bg-blue-600 px-4 py-1 rounded font-sans font-bold" x-text="editMode ? 'LOCK & FORMAT' : 'EDIT SCRIPT'"></button>
+                    </div>
+
+                    <textarea x-show="editMode" x-model="fullScript" class="w-full h-full bg-transparent p-8 text-sm outline-none resize-none" placeholder="Paste script here..."></textarea>
+                    
+                    <div x-show="!editMode" @mouseup="captureSelection()" class="flex-grow bg-white text-black script-container shadow-inner selection:bg-blue-200" x-html="formattedScript"></div>
+                </div>
+
+                <!-- STICKY SHOT FORM -->
+                <div class="col-span-5 font-sans relative">
+                    <template x-if="showForm">
+                        <div class="bg-gray-800 p-6 rounded-xl border-l-4 border-blue-500 shadow-2xl sticky top-0">
+                            <h3 class="text-blue-400 font-bold mb-4 uppercase text-xs" x-text="form.scene"></h3>
+                            <div class="bg-gray-900 p-3 rounded mb-4 italic text-gray-400 border border-gray-700 text-xs line-clamp-3" x-text="'&quot;' + currentSnippet + '&quot;'"></div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="text-[9px] text-gray-500 uppercase font-black">Shot #</label>
+                                    <input x-model="form.label" class="w-full bg-gray-700 p-2 rounded border border-gray-600 text-white outline-none">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] text-gray-500 uppercase font-black">Size</label>
+                                    <select x-model="form.size" class="w-full bg-gray-700 p-2 rounded border border-gray-600 text-white">
+                                        <option>EWS</option><option>WS</option><option>FS</option><option selected>MS</option><option>MCU</option><option>CU</option><option>ECU</option><option>POV</option><option>Insert</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="mt-3">
+                                <label class="text-[9px] text-gray-500 uppercase font-black">Placement</label>
+                                <input x-model="form.placement" placeholder="e.g. Behind the parcel" class="w-full bg-gray-700 p-2 rounded border border-gray-600 text-white outline-none">
+                            </div>
+
+                            <div class="mt-3">
+                                <label class="text-[9px] text-gray-500 uppercase font-black">Notes</label>
+                                <textarea x-model="form.notes" class="w-full bg-gray-700 p-2 rounded border border-gray-600 h-16 outline-none"></textarea>
+                            </div>
+
+                            <button @click="submitShot()" class="mt-4 bg-blue-600 hover:bg-blue-500 w-full py-3 rounded font-bold text-xs shadow-lg">SAVE SHOT</button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </template>
+
+        <!-- SHOT LIST VIEW -->
+        <template x-if="view === 'list'">
+            <div class="col-span-12 overflow-y-auto font-sans pb-10">
+                <template x-for="(sceneShots, sceneName) in groupedShots" :key="sceneName">
+                    <div class="mb-4 bg-gray-900/50 rounded-xl border border-gray-800">
+                        <div @click="toggleScene(sceneName)" class="flex justify-between items-center p-4 cursor-pointer hover:bg-gray-800 transition-colors">
+                            <div class="flex items-center gap-4">
+                                <svg xmlns="http://www.w3.org/2000/svg" 
+                                    class="h-5 w-5 text-blue-500 transition-transform duration-200"
+                                    :class="isSceneOpen(sceneName) ? 'rotate-180' : ''" 
+                                    fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" />
+                                </svg>
+                                <h3 class="text-lg font-bold text-blue-400 uppercase tracking-wide" x-text="sceneName"></h3>
+                            </div>
+                            <span class="text-[10px] text-gray-500 font-bold bg-gray-900 px-3 py-1 rounded-full group-hover:text-gray-300" 
+                                x-text="sceneShots.length + ' SHOTS'"></span>
+                        </div>
+                        <div x-show="isSceneOpen(sceneName)" 
+                            x-transition:enter="transition ease-out duration-200"
+                            x-transition:enter-start="opacity-0 -translate-y-2"
+                            x-transition:enter-end="opacity-100 translate-y-0"
+                            class="p-4 pt-0 space-y-2">
+                            <template x-for="shot in sceneShots" :key="shot.id">
+                                <div @click="selectedShot = shot" class="bg-gray-800 p-3 rounded flex justify-between items-center hover:border-blue-500 border border-transparent cursor-pointer">
+                                    <div class="flex gap-6 items-center">
+                                        <span class="text-blue-500 font-black w-8" x-text="shot.shot_label"></span>
+                                        <div class="flex flex-col">
+                                            <span class="text-xs font-bold text-white uppercase flex-1" x-text="shot.size"></span>
+                                            <span class="text-xs text-gray-500 italic flex-1 truncate px-4" x-text="shot.snippet"></span>
+                                        </div>
+                                        <span class="text-[9px] bg-gray-700 px-2 py-1 rounded" x-text="shot.extras"></span>
+
+                                    </div>
+                                    
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </template>
+
+        <!-- STORYBOARD GRID VIEW -->
+        <template x-if="view === 'storyboard'">
+            <div class="col-span-12 overflow-y-auto pb-20 font-sans">
+                <template x-for="(sceneShots, sceneName) in groupedShots" :key="sceneName">
+                    <div class="mb-10">
+                        <!-- Scene Label -->
+                        <div @click="toggleScene(sceneName)" class="flex items-center gap-3 mb-4 cursor-pointer group">
+                            <span class="text-blue-500 text-[10px]" :class="isSceneOpen(sceneName) ? 'rotate-180' : ''">▼</span>
+                            <h3 class="text-xs font-black text-blue-400 uppercase tracking-[0.2em]" x-text="sceneName"></h3>
+                        </div>
+
+                        <!-- The Grid -->
+                        <div x-show="isSceneOpen(sceneName)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            <template x-for="shot in sceneShots" :key="shot.id">
+                                <div class="bg-gray-800 rounded-xl overflow-hidden border border-gray-800 hover:border-blue-500 transition-all flex flex-col shadow-2xl">
+                                    
+                                    <!-- IMAGE AREA / PICKER TRIGGER -->
+                                    <div class="aspect-video bg-black relative group cursor-pointer">
+                                        <!-- Hidden Input -->
+                                        <input type="file" :id="'file-' + shot.id" class="hidden" @change="uploadFile($event, shot.id)">
+                                        
+                                        <!-- Clickable Preview -->
+                                        <div @click="document.getElementById('file-' + shot.id).click()" class="w-full h-full">
+                                            <img :src="shot.image_url ? '/static/projects/last_parcel/' + shot.image_url : placeholder" 
+                                                class="w-full h-full object-cover group-hover:opacity-80 transition-opacity">
+                                            
+                                            <!-- Overlay when no image -->
+                                            <template x-if="!shot.image_url">
+                                                <div class="absolute inset-0 flex items-center justify-center">
+                                                    <span class="text-[9px] font-black text-blue-500/50 uppercase border border-blue-500/20 px-4 py-2 rounded-full">Click to add frame</span>
+                                                </div>
+                                            </template>
+                                        </div>
+
+                                        <!-- Shot ID Tag -->
+                                        <div class="absolute top-3 left-3 bg-black/80 px-2 py-1 rounded text-[10px] font-black text-blue-400 border border-blue-500/20" x-text="shot.shot_label"></div>
+                                    </div>
+
+                                    <!-- INFO BELOW CARD -->
+                                    <div class="p-4 bg-gray-900/50 flex-grow">
+                                        <div class="flex justify-between items-center mb-3">
+                                            <span class="text-[11px] font-black text-white uppercase tracking-tighter" x-text="shot.size"></span>
+                                            <span class="text-[9px] text-gray-500 font-bold" x-text="shot.angle"></span>
+                                        </div>
+                                        
+                                        <div class="space-y-1">
+                                            <p class="text-[10px] text-gray-400 font-mono leading-tight truncate">
+                                                <span class="text-gray-600 font-black text-[8px] uppercase">Placement:</span> 
+                                                <span x-text="shot.placement || '-'"></span>
+                                            </p>
+                                            <p class="text-[10px] text-gray-500 italic line-clamp-2 mt-2 border-t border-gray-800 pt-2" x-text="shot.snippet"></p>
+                                        </div>
+                                        
+                                        <!-- Quick Edit Link -->
+                                        <button @click="selectedShot = shot" class="mt-4 text-[8px] font-black text-gray-600 hover:text-blue-400 uppercase tracking-widest transition-colors">Edit Metadata</button>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </template>
+
+    </main>
+
+    <!-- EDIT MODAL (Global) -->
+    <template x-if="selectedShot">
+        <div class="fixed inset-0 bg-black/90 flex items-center justify-center p-6 z-50 font-sans">
+            <div class="bg-gray-800 p-8 rounded-2xl max-w-2xl w-full border border-gray-700 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+                
+                <div class="flex justify-between items-start mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-blue-400 mb-1" x-text="'Edit Shot ' + selectedShot.shot_label"></h2>
+                        <p class="text-xs text-gray-500 uppercase tracking-widest" x-text="selectedShot.scene_num"></p>
+                    </div>
+                    <button @click="selectedShot = null" class="text-gray-400 hover:text-white text-3xl">&times;</button>
+                </div>
+
+                <div class="grid grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <label class="text-[10px] text-gray-500 uppercase font-black block mb-1">Shot #</label>
+                        <input x-model="selectedShot.shot_label" class="w-full bg-gray-900 p-3 rounded border border-gray-700 text-white">
+                    </div>
+
+                    <div>
+                        <label class="text-[10px] text-gray-500 uppercase font-black block mb-1">Size</label>
+                        <select x-model="selectedShot.size" class="w-full bg-gray-900 p-3 rounded border border-gray-700 text-white">
+                            <option>EWS (Extreme Wide Shot)</option>
+                            <option>WS (Wide Shot)</option>
+                            <option>FS (Full Shot)</option>
+                            <option>MWS (Medium Wide Shot)</option>
+                            <option>CS (Cowboy Shot)</option>
+                            <option>MS (Medium Shot)</option>
+                            <option>MCU (Medium Close Up)</option>
+                            <option>CU (Close Up)</option>
+                            <option>ECU (Extreme Close Up)</option>
+                            <option>POV</option>
+                            <option>Insert</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="text-[10px] text-gray-500 uppercase font-black block mb-1">Frame</label>
+                        <select x-model="selectedShot.frame" class="w-full bg-gray-900 p-3 rounded border border-gray-700 text-white">
+                            <option>Single</option>
+                            <option>Two-Shot</option>
+                            <option>Three-Shot</option>
+                            <option>Group Shot</option>
+                            <option>OTS (Over the Shoulder)</option>
+                            <option>POV</option>
+                            <option>Insert</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="text-[10px] text-gray-500 uppercase font-black block mb-1">Angle</label>
+                        <select x-model="selectedShot.angle" class="w-full bg-gray-900 p-3 rounded border border-gray-700 text-white">
+                            <option>Eye Level</option>
+                            <option>Ground Level</option>
+                            <option>Low Angle</option>
+                            <option>High Angle</option>
+                            <option>Dutch Angle</option>
+                            <option>Bird's Eye</option>
+                            <option>Worm's Eye</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <label class="text-[10px] text-gray-500 uppercase font-black block mb-1">Movement</label>
+                    <select x-model="selectedShot.extras" class="w-full bg-gray-900 p-3 rounded border border-gray-700 text-white">
+                        <option>Static</option>
+                        <option>Pan</option>
+                        <option>Tilt</option>
+                        <option>Dolly / Tracking</option>
+                        <option>Handheld</option>
+                        <option>Zoom</option>
+                        <option>Arc</option>
+                        <option>Dolly Zoom</option>
+                        <option>Crane / Jib</option>
+                    </select>
+                </div>
+
+                <div class="mb-6">
+                    <label class="text-[10px] text-gray-500 uppercase font-black block mb-1">Camera Placement</label>
+                    <input x-model="selectedShot.placement" class="w-full bg-gray-900 p-3 rounded border border-gray-700 text-white">
+                </div>
+
+                <div class="mb-6">
+                    <label class="text-[10px] text-gray-500 uppercase font-black block mb-1">Director Notes</label>
+                    <textarea x-model="selectedShot.notes" class="w-full bg-gray-900 p-3 rounded border border-gray-700 h-24 outline-none focus:border-blue-500 transition-colors"></textarea>
+                </div>
+
+                <div class="bg-gray-950 p-4 rounded-lg border-l-2 border-blue-500 mb-8">
+                    <p class="text-[10px] text-blue-500 font-bold uppercase mb-1">Original Script Snippet</p>
+                    <p class="italic text-gray-400 screenplay-font text-sm" x-text="selectedShot.snippet"></p>
+                </div>
+
+                <div class="mb-6">
+                    <label class="text-[10px] text-gray-500 uppercase font-black">Storyboard Filename</label>
+                    <input x-model="selectedShot.image_url" placeholder="e.g. frame1.png" class="w-full bg-gray-900 p-2 rounded border border-gray-700 text-white">
+                </div>
+                
+                <div class="flex justify-between gap-4">
+                    <button @click="deleteShot(selectedShot.id)" class="bg-red-950 hover:bg-red-900 text-red-400 px-6 py-3 rounded-lg font-bold text-xs transition-colors">DELETE PERMANENTLY</button>
+                    <button @click="saveChanges()" class="flex-grow bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-lg font-bold shadow-lg transition-transform active:scale-95">UPDATE SHOT</button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- LINK TO EXTERNAL JS -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+<!-- At the end of the <body> tag in index.html -->
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</html>
+
+
