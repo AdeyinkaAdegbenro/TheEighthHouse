@@ -11,10 +11,12 @@ function shotApp() {
         sceneList: [],
         openScenes: [],
         form: { label: '', size: 'MS (Medium Shot)', frame: 'Single', angle: 'Eye Level', extras: 'Static', scene: '', notes: '', placement: '' },
+        currentProjectId: 1,
 
         async init() {
             await this.fetchShots();
-            const res = await fetch('/get_script');
+            // Fetch the specific script tied to this project ID
+            const res = await fetch(`/${this.currentProjectId}/get_script`);
             const data = await res.json();
             this.fullScript = data.content;
             if (this.fullScript) {
@@ -33,8 +35,14 @@ function shotApp() {
         },
 
         async fetchShots() {
-            const res = await fetch('/get_shots');
+            // Dynamically query by project ID
+            const res = await fetch(`/${this.currentProjectId}/get_shots`);
             this.allShots = await res.json();
+            
+            if (this.openScenes.length === 0 && this.allShots.length > 0) {
+                const firstScene = this.allShots[0].scene_num;
+                this.openScenes.push(firstScene);
+            }
         },
 
         async toggleMode() {
