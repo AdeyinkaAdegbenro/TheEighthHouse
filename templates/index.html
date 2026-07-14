@@ -19,10 +19,24 @@
     <!-- NAVIGATION BAR -->
     <nav class="flex justify-between items-center bg-gray-800 p-4 rounded-xl mb-6 shadow-lg font-sans">
         <div class="flex items-center gap-6">
-            <h2 class="text-xl font-bold text-blue-400 italic">THE EIGHTH HOUSE</h2>
+            <div class="flex items-center gap-3 border-r border-gray-700 pr-4">
+                <h2 class="text-xl font-bold text-blue-400 italic tracking-tight">THE EIGHTH HOUSE</h2>
+                
+                <!-- PROJECT SWITCHER DROPDOWN -->
+                <select 
+                    x-model.number="currentProjectId" 
+                    @change="loadProjectWorkspace()" 
+                    class="bg-gray-900 text-purple-400 text-xs font-black p-1.5 rounded border border-purple-950/60 outline-none cursor-pointer hover:border-purple-500 transition"
+                >
+                    <template x-for="project in projectList" :key="project.id">
+                        <option :value="project.id" x-text="project.title"></option>
+                    </template>
+                </select>
+            </div>
             <button @click="view = 'script'" :class="view === 'script' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-400'" class="pb-1 font-bold uppercase text-xs">Script</button>
             <button @click="view = 'list'; fetchShots()" :class="view === 'list' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-400'" class="pb-1 font-bold uppercase text-xs">Shot List</button>
             <button @click="view = 'storyboard'; fetchShots()" :class="view === 'storyboard' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-400'" class="pb-1 font-bold uppercase text-xs">Storyboard</button>
+            <button @click="view = 'breakdown'; fetchAllBreakdowns()" :class="view === 'breakdown' ? 'text-purple-400 border-b-2 border-purple-400' : 'text-gray-400'" class="pb-1 font-bold uppercase text-xs">📋 Breakdown</button>
         </div>
         
         <div class="flex items-center gap-2 ml-4" x-show="view === 'script' && !editMode">
@@ -53,37 +67,93 @@
                     <div x-show="!editMode" @mouseup="captureSelection()" class="flex-grow bg-white text-black script-container shadow-inner selection:bg-blue-200" x-html="formattedScript"></div>
                 </div>
 
-                <!-- STICKY SHOT FORM -->
-                <div class="col-span-5 font-sans relative">
+                <!-- STICKY SELECTION CONTEXT PANEL -->
+                <div class="col-span-5 font-sans relative" x-data="{ formTab: 'shot' }">
                     <template x-if="showForm">
-                        <div class="bg-gray-800 p-6 rounded-xl border-l-4 border-blue-500 shadow-2xl sticky top-0">
-                            <h3 class="text-blue-400 font-bold mb-4 uppercase text-xs" x-text="form.scene"></h3>
+                        <div class="bg-gray-800 p-6 rounded-xl border-l-4 border-blue-500 shadow-2xl sticky top-4">
+                            
+                            <!-- FORM SELECTOR TABS -->
+                            <div class="flex gap-4 border-b border-gray-700 pb-3 mb-4">
+                                <button 
+                                    @click="formTab = 'shot'" 
+                                    :class="formTab === 'shot' ? 'text-blue-400 border-b-2 border-blue-400 font-black' : 'text-gray-400 font-bold'"
+                                    class="pb-1 uppercase text-[10px] tracking-wider transition-all"
+                                >
+                                    🎥 New Shot
+                                </button>
+                                <button 
+                                    @click="formTab = 'breakdown'" 
+                                    :class="formTab === 'breakdown' ? 'text-purple-400 border-b-2 border-purple-400 font-black' : 'text-gray-400 font-bold'"
+                                    class="pb-1 uppercase text-[10px] tracking-wider transition-all"
+                                >
+                                    🗂️ Tag Breakdown Item
+                                </button>
+                            </div>
+
+                            <!-- Header Info -->
+                            <h3 class="font-bold mb-2 uppercase text-xs" 
+                                :class="formTab === 'shot' ? 'text-blue-400' : 'text-purple-400'"
+                                x-text="formTab === 'shot' ? form.scene : breakdownForm.scene_num"
+                            ></h3>
                             <div class="bg-gray-900 p-3 rounded mb-4 italic text-gray-400 border border-gray-700 text-xs line-clamp-3" x-text="'&quot;' + currentSnippet + '&quot;'"></div>
 
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="text-[9px] text-gray-500 uppercase font-black">Shot #</label>
-                                    <input x-model="form.label" class="w-full bg-gray-700 p-2 rounded border border-gray-600 text-white outline-none">
+                            <!-- TAB 1: ORIGINAL SHOT FORM -->
+                            <div x-show="formTab === 'shot'">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="text-[9px] text-gray-500 uppercase font-black">Shot #</label>
+                                        <input x-model="form.label" class="w-full bg-gray-700 p-2 rounded border border-gray-600 text-white outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="text-[9px] text-gray-500 uppercase font-black">Size</label>
+                                        <select x-model="form.size" class="w-full bg-gray-700 p-2 rounded border border-gray-600 text-white">
+                                            <option>EWS</option><option>WS</option><option>FS</option><option selected>MS</option><option>MCU</option><option>CU</option><option>ECU</option><option>POV</option><option>Insert</option>
+                                        </select>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label class="text-[9px] text-gray-500 uppercase font-black">Size</label>
-                                    <select x-model="form.size" class="w-full bg-gray-700 p-2 rounded border border-gray-600 text-white">
-                                        <option>EWS</option><option>WS</option><option>FS</option><option selected>MS</option><option>MCU</option><option>CU</option><option>ECU</option><option>POV</option><option>Insert</option>
-                                    </select>
+
+                                <div class="mt-3">
+                                    <label class="text-[9px] text-gray-500 uppercase font-black">Placement</label>
+                                    <input x-model="form.placement" placeholder="e.g. Behind the parcel" class="w-full bg-gray-700 p-2 rounded border border-gray-600 text-white outline-none">
+                                </div>
+
+                                <div class="mt-3">
+                                    <label class="text-[9px] text-gray-500 uppercase font-black">Notes</label>
+                                    <textarea x-model="form.notes" class="w-full bg-gray-700 p-2 rounded border border-gray-600 h-16 outline-none"></textarea>
+                                </div>
+
+                                <button @click="submitShot()" class="mt-4 bg-blue-600 hover:bg-blue-500 w-full py-3 rounded font-bold text-xs shadow-lg transition duration-150">SAVE SHOT</button>
+                            </div>
+
+                            <!-- TAB 2: AUTOFILLED BREAKDOWN FORM -->
+                            <div x-show="formTab === 'breakdown'">
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="text-[9px] text-gray-500 uppercase font-black">Category</label>
+                                        <select x-model="breakdownForm.category" class="w-full bg-gray-700 p-2.5 rounded border border-gray-600 text-white text-xs outline-none">
+                                            <option value="Props">🪀 Prop</option>
+                                            <option value="Wardrobe">🧥 Wardrobe / Costume</option>
+                                            <option value="Set Dressing">🪑 Set Dressing</option>
+                                            <option value="Vehicles">🚗 Vehicle</option>
+                                            <option value="SFX / VFX">💥 SFX / VFX</option>
+                                            <option value="Extra Details">📌 Other Notes</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label class="text-[9px] text-gray-500 uppercase font-black">Item Name (Autofilled)</label>
+                                        <input x-model="breakdownForm.item_name" class="w-full bg-gray-700 p-2 rounded border border-gray-600 text-white outline-none text-xs">
+                                    </div>
+
+                                    <div>
+                                        <label class="text-[9px] text-gray-500 uppercase font-black">Production Design Notes</label>
+                                        <textarea x-model="breakdownForm.notes" placeholder="Describe materials, texture, colors, or reference details..." class="w-full bg-gray-700 p-2 rounded border border-gray-600 h-16 outline-none text-xs resize-none"></textarea>
+                                    </div>
+
+                                    <button @click="submitBreakdownForm()" class="w-full bg-purple-600 hover:bg-purple-500 text-white py-3 rounded font-bold text-xs shadow-lg transition duration-150">TAG PRODUCTION ITEM</button>
                                 </div>
                             </div>
 
-                            <div class="mt-3">
-                                <label class="text-[9px] text-gray-500 uppercase font-black">Placement</label>
-                                <input x-model="form.placement" placeholder="e.g. Behind the parcel" class="w-full bg-gray-700 p-2 rounded border border-gray-600 text-white outline-none">
-                            </div>
-
-                            <div class="mt-3">
-                                <label class="text-[9px] text-gray-500 uppercase font-black">Notes</label>
-                                <textarea x-model="form.notes" class="w-full bg-gray-700 p-2 rounded border border-gray-600 h-16 outline-none"></textarea>
-                            </div>
-
-                            <button @click="submitShot()" class="mt-4 bg-blue-600 hover:bg-blue-500 w-full py-3 rounded font-bold text-xs shadow-lg">SAVE SHOT</button>
                         </div>
                     </template>
                 </div>
@@ -194,6 +264,142 @@
                         </div>
                     </div>
                 </template>
+            </div>
+        </template>
+
+        <!-- DEDICATED BREAKDOWN VIEW -->
+        <template x-if="view === 'breakdown'">
+            <div class="col-span-12 overflow-y-auto font-sans pb-10" x-data="{ activeCategoryFilter: 'All' }">
+                
+                <!-- Filter Bar -->
+                <div class="flex gap-2 mb-6 bg-gray-950 p-3 rounded-lg border border-gray-800">
+                    <span class="text-xs text-gray-400 self-center mr-2 font-bold uppercase tracking-wider">Filter Category:</span>
+                    <template x-for="cat in ['All', 'Props', 'Wardrobe', 'Set Dressing', 'Vehicles', 'SFX / VFX', 'Extra Details']">
+                        <button 
+                            @click="activeCategoryFilter = cat"
+                            :class="activeCategoryFilter === cat ? 'bg-purple-600 text-white' : 'bg-gray-900 text-gray-400 hover:text-white border border-gray-800'"
+                            class="px-3 py-1 rounded text-xs font-bold transition"
+                            x-text="cat"
+                        ></button>
+                    </template>
+                </div>
+
+                <!-- Empty State -->
+                <template x-if="breakdownItems.length === 0">
+                    <div class="text-center py-20 bg-gray-950 rounded-xl border border-gray-800">
+                        <p class="text-gray-400">No production design items tagged yet.</p>
+                        <p class="text-xs text-gray-600 mt-2">Go to the Script view, highlight any word, and use the "Tag Breakdown Item" tab to start building your sheet.</p>
+                    </div>
+                </template>
+
+                <!-- Grouped by Scene Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6" x-show="breakdownItems.length > 0">
+                    <template x-for="sceneNum in [...new Set(breakdownItems.map(item => item.scene_num))]" :key="sceneNum">
+                        <!-- Only show the card if there are items inside it that match the current category filter -->
+                        <div 
+                            x-show="breakdownItems.some(item => item.scene_num === sceneNum && (activeCategoryFilter === 'All' || item.category === activeCategoryFilter))"
+                            class="bg-gray-950 rounded-xl border border-gray-800 p-5 flex flex-col justify-between"
+                        >
+                            <h3 class="text-sm font-black text-purple-400 uppercase tracking-widest border-b border-gray-800 pb-2 mb-4" x-text="sceneNum"></h3>
+                            
+                            <div class="space-y-3 flex-grow">
+                                <!-- UPDATE ONLY THE INNER LOOP CARD INSIDE THE DEDICATED BREAKDOWN VIEW -->
+                                <template x-for="item in breakdownItems.filter(item => item.scene_num === sceneNum && (activeCategoryFilter === 'All' || item.category === activeCategoryFilter))" :key="item.id">
+                                    <div class="bg-gray-900 p-3 rounded border border-gray-800/60 transition hover:border-purple-900/40">
+                                        
+                                        <!-- 1. STANDARD DISPLAY MODE -->
+                                        <template x-if="editingBreakdownItem?.id !== item.id">
+                                            <div class="flex justify-between items-start">
+                                                <div class="space-y-1">
+                                                    <div class="flex items-center gap-2">
+                                                        <!-- Category Badge -->
+                                                        <span 
+                                                            class="px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider font-sans"
+                                                            :class="{
+                                                                'bg-purple-900 text-purple-200 border border-purple-700': item.category === 'Props',
+                                                                'bg-blue-900 text-blue-200 border border-blue-700': item.category === 'Wardrobe',
+                                                                'bg-emerald-900 text-emerald-200 border border-emerald-700': item.category === 'Set Dressing',
+                                                                'bg-amber-900 text-amber-200 border border-amber-700': item.category === 'Vehicles',
+                                                                'bg-red-900 text-red-200 border border-red-700': item.category === 'SFX / VFX',
+                                                                'bg-gray-700 text-gray-200 border border-gray-600': !['Props', 'Wardrobe', 'Set Dressing', 'Vehicles', 'SFX / VFX'].includes(item.category)
+                                                            }"
+                                                            x-text="item.category"
+                                                        ></span>
+                                                        <span class="font-bold text-sm text-white" x-text="item.item_name"></span>
+                                                    </div>
+                                                    <p x-show="item.notes" class="text-xs text-gray-400 italic font-mono" x-text="item.notes"></p>
+                                                </div>
+                                                
+                                                <!-- Action Controls -->
+                                                <div class="flex gap-3 text-[10px] font-bold text-gray-500 uppercase font-sans">
+                                                    <button @click="startEditBreakdown(item)" class="hover:text-blue-400 transition">Edit</button>
+                                                    <button @click="deleteBreakdownItem(item.id)" class="hover:text-red-400 transition">Remove</button>
+                                                </div>
+                                            </div>
+                                        </template>
+
+                                        <!-- 2. INLINE IN-PLACE EDIT MODE -->
+                                        <template x-if="editingBreakdownItem?.id === item.id">
+                                            <div class="space-y-3 font-sans">
+                                                <div class="grid grid-cols-3 gap-2">
+                                                    <div class="col-span-1">
+                                                        <label class="block text-[8px] text-gray-500 uppercase font-black mb-1">Category</label>
+                                                        <select 
+                                                            x-model="editingBreakdownItem.category" 
+                                                            class="w-full bg-gray-950 border border-gray-700 rounded px-2 py-1 text-xs text-white outline-none"
+                                                        >
+                                                            <option value="Props">🪀 Prop</option>
+                                                            <option value="Wardrobe">🧥 Wardrobe / Costume</option>
+                                                            <option value="Set Dressing">🪑 Set Dressing</option>
+                                                            <option value="Vehicles">🚗 Vehicle</option>
+                                                            <option value="SFX / VFX">💥 SFX / VFX</option>
+                                                            <option value="Extra Details">📌 Other Notes</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-span-2">
+                                                        <label class="block text-[8px] text-gray-500 uppercase font-black mb-1">Item Name</label>
+                                                        <input 
+                                                            type="text" 
+                                                            x-model="editingBreakdownItem.item_name" 
+                                                            class="w-full bg-gray-950 border border-gray-700 rounded px-2 py-1 text-xs text-white outline-none"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                
+                                                <div>
+                                                    <label class="block text-[8px] text-gray-500 uppercase font-black mb-1">Production Design Specs & Notes</label>
+                                                    <textarea 
+                                                        x-model="editingBreakdownItem.notes" 
+                                                        class="w-full bg-gray-950 border border-gray-700 rounded px-2 py-1 text-xs text-gray-300 outline-none resize-none"
+                                                        rows="1"
+                                                    ></textarea>
+                                                </div>
+                                                
+                                                <!-- Edit Actions -->
+                                                <div class="flex justify-end gap-2 text-[10px] pt-1">
+                                                    <button 
+                                                        @click="cancelEditBreakdown()" 
+                                                        class="text-gray-400 hover:text-white px-2.5 py-1 bg-gray-800 rounded font-bold"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                    <button 
+                                                        @click="updateBreakdownItem(); fetchAllBreakdowns()" 
+                                                        class="text-blue-400 hover:text-white px-2.5 py-1 bg-blue-950/60 border border-blue-700 rounded font-black uppercase tracking-wider"
+                                                    >
+                                                        Save
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </template>
+
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
             </div>
         </template>
 
