@@ -11,19 +11,67 @@ function shotApp() {
         sceneList: [],
         openScenes: [],
         form: { label: '', size: 'MS (Medium Shot)', frame: 'Single', angle: 'Eye Level', extras: 'Static', scene: '', notes: '', placement: '' },
+
         currentProjectId: 1,
+        projectList: [],
+
+        // breakdown states
+        breakdownItems: [],
+        editingBreakdownItem: null, // Holds the item currently being edited
+        showBreakdownPanel: false, // Toggles the breakdown view
+        activeBreakdownScene: '', // Track which scene we are currently viewing/editing details for
+        newBreakdownItem: {
+            category: 'Props',
+            item_name: '',
+            notes: ''
+        },
+
+        breakdownForm: {
+            category: 'Props',
+            item_name: '',
+            notes: '',
+            scene_num: ''
+        },
 
         async init() {
+            try {
+                const pRes = await fetch('/get_projects');
+                this.projectList = await pRes.json();
+            } catch (err) {
+                console.error("Error loading project list:", err);
+            }
+            await this.loadProjectWorkspace(); // Load the workspace for the initial project
+        },
+
+        async loadProjectWorkspace() {
+            this.showForm = false; // Hide any open highlighting cards
+            this.allShots = [];
+            this.breakdownItems = [];
+            
+            // Fetch shots for the newly active movie
             await this.fetchShots();
-            // Fetch the specific script tied to this project ID
+
+            // Fetch and process the screenplay script tied to this project ID
             const res = await fetch(`/${this.currentProjectId}/get_script`);
             const data = await res.json();
-            this.fullScript = data.content;
+            this.fullScript = data.content || "";
+            
             if (this.fullScript) {
                 this.processScript();
                 this.editMode = false;
+            } else {
+                this.formattedScript = "";
+                this.sceneList = [];
+                this.editMode = true; // Open editor if the new film has no text yet
+            }
+
+            // If you are currently sitting on the Breakdown View tab, refresh its master sheet list too
+            if (this.view === 'breakdown') {
+                await this.fetchAllBreakdowns();
             }
         },
+
+
 
         get groupedShots() {
             return this.allShots.reduce((groups, shot) => {
@@ -93,7 +141,15 @@ function shotApp() {
                 }
             });
 
-            this.form.scene = activeHeader ? activeHeader.replace('SCENE ', 'SC ') : "SC 0: PROLOGUE";
+            const computedScene = activeHeader ? activeHeader.replace('SCENE ', 'SC ') : "SC 0: PROLOGUE";
+
+            this.form.scene = computedScene;
+
+            // 2. Populate the Selection Tagging setup with highlighted text
+            this.breakdownForm.scene_num = computedScene;
+            this.breakdownForm.item_name = text;
+            this.breakdownForm.notes = '';
+
             this.showForm = true;
         },
 
@@ -174,6 +230,145 @@ function shotApp() {
                 }
             } catch (err) {
                 console.error("Upload failed", err);
+            }
+        },
+        // --- BREAKDOWN METHODS ---
+
+        async fetchAllBreakdowns() {
+            try {
+                const res = await fetch(`/${this.currentProjectId}/get_all_breakdowns`);
+                this.breakdownItems = await res.json();
+            } catch (err) {
+                console.error("Error fetching project breakdowns:", err);
+            }
+        },
+
+        // Fetch all breakdown items for a specific scene
+        async fetchBreakdown(sceneNum) {
+            this.activeBreakdownScene = sceneNum;
+            try {
+                const res = await fetch(`/${this.currentProjectId}/${sceneNum}/get_breakdown`);
+                this.breakdownItems = await res.json();
+                this.showBreakdownPanel = true;
+            } catch (err) {
+                console.error("Error fetching breakdown:", err);
+            }
+        },
+
+        // Save a newly created breakdown item
+        async saveBreakdownItem() {
+            if (!this.newBreakdownItem.item_name.trim()) return;
+
+            const payload = {
+                project_id: this.currentProjectId,
+                scene_num: this.activeBreakdownScene,
+                category: this.newBreakdownItem.category,
+                item_name: this.newBreakdownItem.item_name,
+                notes: this.newBreakdownItem.notes
+            };
+
+            try {
+                const res = await fetch('/save_breakdown_item', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    // Reset input form
+                    this.newBreakdownItem.item_name = '';
+                    this.newBreakdownItem.notes = '';
+                    // Refresh list
+                    await this.fetchBreakdown(this.activeBreakdownScene);
+                }
+            } catch (err) {
+                console.error("Error saving breakdown item:", err);
+            }
+        },
+
+        async submitBreakdownForm() {
+            if (!this.breakdownForm.item_name.trim()) return;
+
+            const payload = {
+                project_id: this.currentProjectId,
+                scene_num: this.breakdownForm.scene_num,
+                category: this.breakdownForm.category,
+                item_name: this.breakdownForm.item_name,
+                notes: this.breakdownForm.notes
+            };
+
+            try {
+                const res = await fetch('/save_breakdown_item', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    this.showForm = false; // Close the right-hand panel card
+                    this.breakdownForm.item_name = '';
+                    this.breakdownForm.notes = '';
+                    
+                    // If the sliding list panel is currently open for this scene, refresh it!
+                    if (this.showBreakdownPanel && this.activeBreakdownScene === payload.scene_num) {
+                        await this.fetchBreakdown(this.activeBreakdownScene);
+                    }
+                }
+            } catch (err) {
+                console.error("Error saving highlighted breakdown item:", err);
+            }
+        },
+
+        // Put an item into edit mode
+        startEditBreakdown(item) {
+            this.editingBreakdownItem = { ...item };
+        },
+
+        // Cancel editing
+        cancelEditBreakdown() {
+            this.editingBreakdownItem = null;
+        },
+
+        // Update an existing breakdown item
+        async updateBreakdownItem() {
+            if (!this.editingBreakdownItem.item_name.trim()) return;
+
+            try {
+                const res = await fetch('/update_breakdown_item', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(this.editingBreakdownItem)
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    this.editingBreakdownItem = null;
+                    await this.fetchBreakdown(this.activeBreakdownScene);
+                }
+            } catch (err) {
+                console.error("Error updating breakdown item:", err);
+            }
+        },
+
+        // Delete a breakdown item
+        async deleteBreakdownItem(itemId) {
+            if (!confirm("Are you sure you want to remove this item from the breakdown?")) return;
+
+            try {
+                const res = await fetch(`/delete_breakdown_item/${itemId}`, {
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    if (this.view === 'breakdown') {
+                        await this.fetchAllBreakdowns(); // Refreshes the master view state instantly!
+                    } else {
+                        // Fallback for the side panel overlay context
+                        await this.fetchBreakdown(this.activeBreakdownScene);
+                    }
+
+                }
+            } catch (err) {
+                console.error("Error deleting breakdown item:", err);
             }
         }
     }

@@ -40,10 +40,14 @@ def init_db():
              project_id INTEGER UNIQUE, 
              content TEXT)''')
 
-        # --- SEAMLESS MIGRATION PATCHES ---
-        # Seed your first project baseline safely
-        conn.execute('INSERT OR IGNORE INTO projects (id, title, folder_name) VALUES (1, "The Last Parcel", "last_parcel")')
-        conn.execute('INSERT OR IGNORE INTO script_data (project_id, content) VALUES (1, "")')
+        # 4. Script Breakdown Table
+        conn.execute('''CREATE TABLE IF NOT EXISTS script_breakdowns 
+            (id INTEGER PRIMARY KEY AUTOINCREMENT, 
+             project_id INTEGER NOT NULL,
+             scene_num TEXT NOT NULL,
+             category TEXT NOT NULL, -- e.g., 'Props', 'Wardrobe', 'Set Dressing'
+             item_name TEXT NOT NULL,
+             notes TEXT)''')
 
         # Migration: Safely add project_id to shots table if it wasn't there
         try:
@@ -53,6 +57,14 @@ def init_db():
             pass # Column already exists
 
     conn.commit()
+
+
+@app.route('/get_projects', methods=['GET'])
+def get_projects():
+    with get_db_connection() as conn:
+        cursor = conn.execute('SELECT * FROM projects ORDER BY id ASC')
+        projects = [dict(row) for row in cursor.fetchall()]
+    return jsonify(projects)
 
 # SURGICAL UPDATE: Update routes to target the unique project_id integer
 @app.route('/<int:project_id>/get_shots', methods=['GET'])
@@ -137,6 +149,54 @@ def upload_storyboard(shot_id):
             conn.execute('UPDATE shots SET image_url = ? WHERE id = ?', (filename, shot_id))
         
         return jsonify({"status": "success", "filename": filename})
+
+
+@app.route('/<int:project_id>/get_all_breakdowns', methods=['GET'])
+def get_all_breakdowns(project_id):
+    with get_db_connection() as conn:
+        cursor = conn.execute(
+            'SELECT * FROM script_breakdowns WHERE project_id = ? ORDER BY scene_num, category, item_name ASC',
+            (project_id,)
+        )
+        items = [dict(row) for row in cursor.fetchall()]
+    return jsonify(items)
+
+@app.route('/<int:project_id>/<scene_num>/get_breakdown', methods=['GET'])
+def get_breakdown(project_id, scene_num):
+    with get_db_connection() as conn:
+        cursor = conn.execute(
+            'SELECT * FROM script_breakdowns WHERE project_id = ? AND scene_num = ? ORDER BY category, item_name ASC',
+            (project_id, scene_num)
+        )
+        items = [dict(row) for row in cursor.fetchall()]
+    return jsonify(items)
+
+@app.route('/save_breakdown_item', methods=['POST'])
+def save_breakdown_item():
+    d = request.json
+    with get_db_connection() as conn:
+        conn.execute(
+            '''INSERT INTO script_breakdowns (project_id, scene_num, category, item_name, notes) 
+               VALUES (?, ?, ?, ?, ?)''',
+            (d['project_id'], d['scene_num'], d['category'], d['item_name'], d.get('notes', ''))
+        )
+    return jsonify({"status": "success"})
+
+@app.route('/update_breakdown_item', methods=['POST'])
+def update_breakdown_item():
+    d = request.json
+    with get_db_connection() as conn:
+        conn.execute('''UPDATE script_breakdowns 
+                        SET category=?, item_name=?, notes=? 
+                        WHERE id = ?''', 
+                     (d['category'], d['item_name'], d['notes'], d['id']))
+    return jsonify({"status": "success"})
+
+@app.route('/delete_breakdown_item/<int:item_id>', methods=['DELETE'])
+def delete_breakdown_item(item_id):
+    with get_db_connection() as conn:
+        conn.execute('DELETE FROM script_breakdowns WHERE id = ?', (item_id,))
+    return jsonify({"status": "success"})
 
 if __name__ == '__main__':
     init_db()
