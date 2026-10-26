@@ -88,8 +88,9 @@ def index():
 @app.route('/save_script', methods=['POST'])
 def save_script():
     content = request.json.get('content')
+    project_id = request.json.get('project_id', 1)  # Default to project_id 1 if not provided
     with get_db_connection() as conn:
-        conn.execute('UPDATE script_data SET content = ? WHERE project_id = ?', (content, 1))
+        conn.execute('UPDATE script_data SET content = ? WHERE project_id = ?', (content, project_id))
     return jsonify({"status": "success"})
 
 
@@ -155,7 +156,7 @@ def upload_storyboard(shot_id):
 def get_all_breakdowns(project_id):
     with get_db_connection() as conn:
         cursor = conn.execute(
-            'SELECT * FROM script_breakdowns WHERE project_id = ? ORDER BY scene_num, category, item_name ASC',
+            'SELECT * FROM script_breakdowns WHERE project_id = ? ORDER BY cast(SUBSTR(scene_num, 4, 2) as INT), category, item_name ASC',
             (project_id,)
         )
         items = [dict(row) for row in cursor.fetchall()]
