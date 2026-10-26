@@ -131,12 +131,22 @@
                                     <div>
                                         <label class="text-[9px] text-gray-500 uppercase font-black">Category</label>
                                         <select x-model="breakdownForm.category" class="w-full bg-gray-700 p-2.5 rounded border border-gray-600 text-white text-xs outline-none">
-                                            <option value="Props">🪀 Prop</option>
+                                            <option value="Cast Member">👥 Cast Member</option>
+                                            <option value="Extras">👥 Extras</option>
+                                            <option value="Setting">🏠 Setting</option>
+                                            <option value="Makeup">🪀 Makeup</option>
+                                            <option value="Props">🪀 Props</option>
                                             <option value="Wardrobe">🧥 Wardrobe / Costume</option>
                                             <option value="Set Dressing">🪑 Set Dressing</option>
                                             <option value="Vehicles">🚗 Vehicle</option>
                                             <option value="SFX / VFX">💥 SFX / VFX</option>
                                             <option value="Extra Details">📌 Other Notes</option>
+                                            <option value="Stunts"> 🤸‍♂️ Stunts</option>
+                                            <option value="Animals"> 🐾 Animals</option>
+                                            <option value="Music">🎵 Music</option>
+                                            <option value="Sound">🔊 Sound</option>
+                                            <option value="Greenery">🌳 Greenery</option>
+                                            <option value="Lighting">💡 Lighting</option>
                                         </select>
                                     </div>
 
@@ -274,7 +284,7 @@
                 <!-- Filter Bar -->
                 <div class="flex gap-2 mb-6 bg-gray-950 p-3 rounded-lg border border-gray-800">
                     <span class="text-xs text-gray-400 self-center mr-2 font-bold uppercase tracking-wider">Filter Category:</span>
-                    <template x-for="cat in ['All', 'Props', 'Wardrobe', 'Set Dressing', 'Vehicles', 'SFX / VFX', 'Extra Details']">
+                    <template x-for="cat in ['All', 'Cast Member', 'Setting', 'Props', 'Extras', 'Wardrobe', 'Set Dressing', 'Vehicles', 'SFX / VFX', 'Extra Details', 'Sound', 'Makeup', 'Animals', 'Stunts', 'Greenery', 'Music', 'Lighting']" :key="cat">
                         <button 
                             @click="activeCategoryFilter = cat"
                             :class="activeCategoryFilter === cat ? 'bg-purple-600 text-white' : 'bg-gray-900 text-gray-400 hover:text-white border border-gray-800'"
@@ -321,7 +331,18 @@
                                                                 'bg-emerald-900 text-emerald-200 border border-emerald-700': item.category === 'Set Dressing',
                                                                 'bg-amber-900 text-amber-200 border border-amber-700': item.category === 'Vehicles',
                                                                 'bg-red-900 text-red-200 border border-red-700': item.category === 'SFX / VFX',
-                                                                'bg-gray-700 text-gray-200 border border-gray-600': !['Props', 'Wardrobe', 'Set Dressing', 'Vehicles', 'SFX / VFX'].includes(item.category)
+                                                                'bg-gray-700 text-gray-200 border border-gray-600': !['Props', 'Wardrobe', 'Set Dressing', 'Vehicles', 'SFX / VFX'].includes(item.category),
+                                                                'bg-pink-900 text-pink-200 border border-pink-700': item.category === 'Cast Member',
+                                                                'bg-cyan-900 text-cyan-200 border border-cyan-700': item.category === 'Extras',
+                                                                'bg-yellow-900 text-yellow-200 border border-yellow-700': item.category === 'Setting',
+                                                                'bg-fuchsia-900 text-fuchsia-200 border border-fuchsia-700': item.category === 'Makeup',
+                                                                'bg-lime-900 text-lime-200 border border-lime-700': item.category === 'Animals',
+                                                                'bg-violet-900 text-violet-200 border border-violet-700': item.category === 'Stunts',
+                                                                'bg-emerald-900 text-emerald-200 border border-emerald-700': item.category === 'Greenery',
+                                                                'bg-indigo-900 text-indigo-200 border border-indigo-700': item.category === 'Music',
+                                                                'bg-sky-900 text-sky-200 border border-sky-700': item.category === 'Sound',
+                                                                'bg-amber-900 text-amber-200 border border-amber-700': item.category === 'Lighting',
+                                                                'bg-gray-700 text-gray-200 border border-gray-600': item.category === 'Extra Details'
                                                             }"
                                                             x-text="item.category"
                                                         ></span>
@@ -348,12 +369,22 @@
                                                             x-model="editingBreakdownItem.category" 
                                                             class="w-full bg-gray-950 border border-gray-700 rounded px-2 py-1 text-xs text-white outline-none"
                                                         >
-                                                            <option value="Props">🪀 Prop</option>
+                                                            <option value="Cast Member">🪀 Cast Member</option>
+                                                            <option value="Extras">👥 Extras</option>
+                                                            <option value="Setting">🏠 Setting</option>
+                                                            <option value="Makeup">🪀 Makeup</option>
+                                                            <option value="Props">🪀 Props</option>
                                                             <option value="Wardrobe">🧥 Wardrobe / Costume</option>
                                                             <option value="Set Dressing">🪑 Set Dressing</option>
                                                             <option value="Vehicles">🚗 Vehicle</option>
                                                             <option value="SFX / VFX">💥 SFX / VFX</option>
                                                             <option value="Extra Details">📌 Other Notes</option>
+                                                            <option value="Stunts"> stunt </option>
+                                                            <option value="Animals"> 🐾 Animals</option>
+                                                            <option value="Music">🎵 Music</option>
+                                                            <option value="Sound">🔊 Sound</option>
+                                                            <option value="Greenery">🌳 Greenery</option>
+                                                            <option value="Lighting">💡 Lighting</option>
                                                         </select>
                                                     </div>
                                                     <div class="col-span-2">

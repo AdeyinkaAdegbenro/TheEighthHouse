@@ -98,7 +98,7 @@ function shotApp() {
                 await fetch('/save_script', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ content: this.fullScript })
+                    body: JSON.stringify({ content: this.fullScript, project_id: this.currentProjectId })
                 });
                 this.processScript();
             }
