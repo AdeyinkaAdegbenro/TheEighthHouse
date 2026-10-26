@@ -157,7 +157,7 @@ function shotApp() {
             await fetch('/save_shot', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({...this.form, snippet: this.currentSnippet})
+                body: JSON.stringify({...this.form, snippet: this.currentSnippet, project_id: this.currentProjectId})
             });
             this.showForm = false;
             this.form.label = ''; 

@@ -107,14 +107,68 @@
                                     <div>
                                         <label class="text-[9px] text-gray-500 uppercase font-black">Size</label>
                                         <select x-model="form.size" class="w-full bg-gray-700 p-2 rounded border border-gray-600 text-white">
-                                            <option>EWS</option><option>WS</option><option>FS</option><option selected>MS</option><option>MCU</option><option>CU</option><option>ECU</option><option>POV</option><option>Insert</option>
+                                           <option value="EWS (Extreme Wide Shot)">EWS (Extreme Wide Shot)</option>
+                                            <option value="WS (Wide Shot)">WS (Wide Shot)</option>
+                                            <option value="FS (Full Shot)">FS (Full Shot)</option>
+                                            <option value="MWS (Medium Wide Shot)">MWS (Medium Wide Shot)</option>
+                                            <option value="CS (Cowboy Shot)" selected>CS (Cowboy Shot)</option>
+                                            <option value="MS (Medium Shot)" selected>MS (Medium Shot)</option>
+                                            <option value="MCU (Medium Close Up)">MCU (Medium Close Up)</option>
+                                            <option value="CU (Close Up)">CU (Close Up)</option>
+                                            <option value="ECU (Extreme Close Up)">ECU (Extreme Close Up)</option>
+                                            <option value="POV">POV</option>
+                                            <option value="Insert">Insert</option>
                                         </select>
                                     </div>
                                 </div>
 
                                 <div class="mt-3">
-                                    <label class="text-[9px] text-gray-500 uppercase font-black">Placement</label>
+                                    <label class="text-[9px] text-gray-500 uppercase font-black">Camera Placement</label>
                                     <input x-model="form.placement" placeholder="e.g. Behind the parcel" class="w-full bg-gray-700 p-2 rounded border border-gray-600 text-white outline-none">
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-4 mt-4">
+                                    <div>
+                                        <label class="text-[10px] text-gray-500 uppercase font-black">Frame</label>
+                                        <select x-model="form.frame" class="w-full bg-gray-700 p-3 rounded border border-gray-600 text-white">
+                                            <option selected>Single</option>
+                                            <option>Two-Shot</option>
+                                            <option>Three-Shot</option>
+                                            <option>Group Shot</option>
+                                            <option>OTS (Over the Shoulder)</option>
+                                            <option>POV</option>
+                                            <option>Insert</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="text-[10px] text-gray-500 uppercase font-black">Angle</label>
+                                        <select x-model="form.angle" class="w-full bg-gray-700 p-3 rounded border border-gray-600 text-white">
+                                            <option selected>Eye Level</option>
+                                            <option selected>Ground Level</option>
+                                            <option>Low Angle</option>
+                                            <option>High Angle</option>
+                                            <option>Dutch Angle</option>
+                                            <option>Bird's Eye</option>
+                                            <option>Worm's Eye</option>
+                                            <option>Hip Level</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="mt-4">
+                                    <label class="text-[10px] text-gray-500 uppercase font-black">Movement</label>
+                                    <select x-model="form.extras" class="w-full bg-gray-700 p-3 rounded border border-gray-600 text-white">
+                                        <option selected>Static</option>
+                                        <option>Pan</option>
+                                        <option>Tilt</option>
+                                        <option>Dolly / Tracking</option>
+                                        <option>Handheld</option>
+                                        <option>Zoom</option>
+                                        <option>Arc</option>
+                                        <option>Dolly Zoom</option>
+                                        <option>Crane / Jib</option>
+                                        <option>Snorricam</option>
+                                    </select>
                                 </div>
 
                                 <div class="mt-3">
